@@ -22,6 +22,15 @@ func_plot <- function(data, variable){
     stop("Variable is not numeric")
   }
   
+## Adrian comments, 14. June 2024
+## Everything works fine, very well done
+## To consider:
+## The data is now labelled which you can note, for example, when
+## you simply call the dataframe there will be dbl+lbl
+## in some cases, the labels can get frustrating to work with
+## if that ever happens to you, consider first deleting the labels or 
+## storing the labels in a separate data frame
+## a package that can handle labels is sjlabelled::
   
   #plotting 
   ggplot(data, aes_string(x = variable)) +
