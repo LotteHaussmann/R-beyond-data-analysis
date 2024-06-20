@@ -1,0 +1,306 @@
+---
+title: "R beyond Data Analysis"
+subtitel: "Function Plotting"
+author: 
+- name: "Charlotte Haussmann"
+  url: https://github.com/LotteHaussmann/R-beyond-data-analysis
+  affiliation: Uni.lu
+  affiliation_url: https://www.jugend-in-luxemburg.lu
+date: "`r Sys.Date()`"
+output: 
+  html_document: default
+abstract: Here we learn how to write a *plotting function*.
+keywords: ["R", "Function", "rmarkdown", "yaml"]
+subject: Social Science
+lang: "en"
+---
+
+```{r setup, include=FALSE}
+```
+
+```{r, echo=F, warning=FALSE, message=FALSE}
+r <- getOption("repos")
+r["CRAN"] <-"https://cloud.r-project.org/"
+options(repos=r)
+
+if (!require(haven)) {
+    install.packages("haven")
+    require(haven)
+}
+
+if (!require(ggplot2)) {
+    install.packages("ggplot2")
+    require(ggplot2)
+}
+if (!require(tidyverse)) {
+    install.packages("tidyverse")
+    require(tidyverse)
+}
+```
+
+  
+***  
+### How to write a plotting function 
+  
+First we read load the packages *haven* and *ggplot2*. 
+```{r, echo=T,eval=F}
+library(haven)
+library(ggplot2)
+
+```
+
+The next step is to load the data from Stanciu et al. (2017). 
+```{r, echo = T}
+df <- read_sav("data/sample.sav")
+```
+
+
+After that we are creating a function for plotting. 
+```{r, echo = FALSE}
+func_plot <- function(data, variable){
+  
+  if (!(variable %in% names(data))) {
+    stop("Variable not found in data frame")
+  }
+ 
+  if(!is.numeric(data[[variable]])) {
+    stop("Variable is not numeric")
+  }
+  
+  ggplot(data, aes_string(x = variable)) +
+    geom_bar(fill = "skyblue", color = "black") +
+    labs(title = paste("Histogram of", variable),
+         x = variable,
+         y = "Frequency") +
+    theme_minimal()
+  
+}
+```
+***
+##### Let's look at it, step by step.  
+We create a new object **func_plot**. This function accesses a **data set** and the **variables** contained in it  
+```{r, echo = T, eval = F}
+func_plot <- function(data, variable){
+  
+}
+```
+
+First we want to check if the called variable is inside the data set. If not, there will be a warning message displayed: *"Variable not found in data frame"*.
+
+```{r, echo = T, eval = F}
+func_plot <- function(data, variable){
+  
+  if (!(variable %in% names(data))) {
+    stop("Variable not found in data frame")
+  }}
+```
+After that we check if the variable is or is not numeric. If the variable is **not** numeric, the warning message *"Variable is not numeric"* will be displayed. 
+```{r, echo = T, eval = F}
+func_plot <- function(data, variable){
+  
+  if (!(variable %in% names(data))) {
+    stop("Variable not found in data frame")
+  }
+ 
+  if(!is.numeric(data[[variable]])) {
+    stop("Variable is not numeric")
+  }}
+```
+The last step is to great a plot with the package *ggplot2*. We are creating a histogram with *geom_bar* and customized colours and title.  
+```{r}
+func_plot <- function(data, variable){
+  
+  if (!(variable %in% names(data))) {
+    stop("Variable not found in data frame")
+  }
+ 
+  if(!is.numeric(data[[variable]])) {
+    stop("Variable is not numeric")
+  }
+  
+  ggplot(data, aes_string(x = variable)) +
+    geom_bar(fill = "skyblue", color = "black") +
+    labs(title = paste("Histogram of", variable),
+         x = variable,
+         y = "Frequency") +
+    theme_minimal()
+  
+}
+```
+
+Now we will use this new function with the variable **gen** which stands for gender, with ($1=female;2=male$). 
+```{r, warning=FALSE, message=FALSE, out.width = '60%'}
+func_plot(df, "gen")
+```
+
+  
+And once again, with the variable **age**. 
+```{r, out.width = '120%'}
+func_plot(df, "age")
+```
+
+  
+And a last time with **men_warm**.
+```{r, warning=FALSE, message=FALSE}
+func_plot(df, "men_warm") 
+```
+
+***
+***
+## Plain vs. live text 
+```{r}
+pacman::p_load(tidyverse, readxl, haven, sjlabelled, BiocManager, kableExtra)
+# create an object dataframe example `dfex` and assign to it the .sav file `sample.sav` that was introduced previously
+dfex<-haven::read_sav("data/sample.sav")
+
+# create an object movies metadata `dfmv` and assign to it the .xlsx file `movies.xlsx`
+# note the different paths to these files
+# note that we specify which sheet to read too; here only sheet 1 is imported
+dfmv<-readxl::read_excel("data/movies.xlsx",1)
+
+# next, we check if the source material was imported successfully by observing the first lines in the tables
+head(dfex)
+head(dfmv)
+
+```
+
+This is an example of how automatization can be implemented in the work flow. My list of movies include `r nrow(dfmv)` entries. The title of those movies are `r dfmv$Movie`. Is there a movie that I actually don't like on that list, well, the answer is that I dislike exactly `r dfmv %>% filter(Like %in% c("No","no","NO")) %>% nrow()` movies on that list.  
+On average I liked all movies on a grade of `r mean(dfmv$Grade)` with the lowest rating of `r min(dfmv$Grade)` to the max rating of  `r max(dfmv$Grade)`. 
+
+```{r, echo = F}
+# complete cases
+dfex_full <- dfex[complete.cases(dfex$age, dfex$gen, dfex$men_warm, dfex$men_comp),]
+
+reg1 <- lm(men_warm ~ age + gen, data = dfex_full )
+summary_reg1 <- summary(reg1)
+coefficients <- summary_reg1$coefficients
+
+#p_values <- coefficients[, "Pr(>|t|)"]
+x <- "not significant"
+y <- "significant"
+
+
+```
+
+The regression shows that age have an effect of `r coefficients[2,1]` with a p-value of `r coefficients[2,4]`. The estimator is `r ifelse(coefficients[2,4]< .05, y ,x)`.
+Gender has an effect of `r coefficients[3,1]` with a p-value of `r coefficients[3,4]`. The estimator is `r ifelse(coefficients[2,4]< .05, y ,x)`.
+
+
+*** 
+## New Movie Tabels and Plots 
+
+```{r}
+dfmv %>% knitr::kable(caption="Simple table using knitr::kable()",format = "pipe")
+
+# does some data manipulation to retrieve the required information
+tmptbl<-dfmv %>% 
+  filter(Actor %in% c("Keanu Reeves", "Alec Baldwin"))
+
+# creates an empty table holder that is our summary table that we'd
+# want to include in the final output document
+extbl<-tibble(
+  
+  like=tmptbl[ tmptbl$Grade >= 8 |tmptbl$Grade <= 5 & tmptbl$Like %in% c("Yes","No"), ]$Like,
+  name=tmptbl[ tmptbl$Grade >= 8 |tmptbl$Grade <= 5 & tmptbl$Like %in% c("Yes","No"), ]$Actor,
+  movie=tmptbl[ tmptbl$Grade >= 8 |tmptbl$Grade <= 5 & tmptbl$Like %in% c("Yes","No"), ]$Movie,
+  wiki=tmptbl[ tmptbl$Grade >= 8 |tmptbl$Grade <= 5 & tmptbl$Like %in% c("Yes","No"), ]$Wikilink
+  )
+```
+
+```{r}
+extbl %>% knitr::kable(caption="Movies graded 8 or more from liked and least like actors with Keanu Reeves and Alec Baldwin", format="pipe")
+```
+
+```{r}
+# we remove all the labels using the package sjlabelled and mutate
+# as factors columns gen and res
+# this step makes it easier later on to work with plots
+# note that it is not a necessary step in general but only for the sake of 
+# simplicity here
+dfex<-dfex %>% sjlabelled::remove_all_labels() %>% 
+  mutate(gen=factor(gen),
+         res=factor(res))
+
+# subsamples 15 study participants at random
+tmpdf1<-sample_n(dfex,15)
+# subsample 60 study participants at random
+tmpdf2<-sample_n(dfex,60)
+
+```
+
+```{r, warning=F, message=F}
+haven::write_sav(tmpdf1,"data/tmpdf1.sav")
+haven::write_sav(tmpdf2,"data/tmpdf2.sav")
+```
+
+```{r, warning = F, message=F}
+# import dataset into one object and then subject this object to the ggplot code
+
+# 1 - imports dataset into object tempdf
+tempdf<-haven::read_sav("data/tmpdf1.sav") %>% sjlabelled::remove_all_labels() %>% 
+  mutate(gen=factor(gen),
+         res=factor(res))
+
+# 2 - applies the ggplot to the dataset
+ggplot(tempdf, aes(x=gen, y=wom_warm)) + 
+  labs(x="Gender",
+       y="Stereotype of warmth") +
+  geom_boxplot() + 
+  theme_light()
+
+
+
+# 3 - for illustration purposes, repeat step 1 with each 
+# of the three datasets (tmpdf1,tmpdf2 and dfex) 
+# making sure they are assigned into the same object tempdf. 
+# As long as the ggplot code is applied to a dataset with the same structure
+# and variable labels the output will be updated automatically.
+```
+
+```{r, warning = F, message=F}
+# import dataset into one object and then subject this object to the ggplot code
+
+# 1 - imports dataset into object tempdf
+tempdf<-haven::read_sav("data/tmpdf2.sav") %>% sjlabelled::remove_all_labels() %>% 
+  mutate(gen=factor(gen),
+         res=factor(res))
+
+# 2 - applies the ggplot to the dataset
+ggplot(tempdf, aes(x=gen, y=wom_warm)) + 
+  labs(x="Gender",
+       y="Stereotype of warmth") +
+  geom_boxplot() + 
+  theme_light()
+
+
+
+# 3 - for illustration purposes, repeat step 1 with each 
+# of the three datasets (tmpdf1,tmpdf2 and dfex) 
+# making sure they are assigned into the same object tempdf. 
+# As long as the ggplot code is applied to a dataset with the same structure
+# and variable labels the output will be updated automatically.
+```
+
+```{r, warning = F, message=F}
+# import dataset into one object and then subject this object to the ggplot code
+
+# 1 - imports dataset into object tempdf
+tempdf<-haven::read_sav("data/sample.sav") %>% sjlabelled::remove_all_labels() %>% 
+  mutate(gen=factor(gen),
+         res=factor(res))
+
+# 2 - applies the ggplot to the dataset
+ggplot(tempdf, aes(x=gen, y=wom_warm)) + 
+  labs(x="Gender",
+       y="Stereotype of warmth") +
+  geom_boxplot() + 
+  theme_light()
+
+
+
+# 3 - for illustration purposes, repeat step 1 with each 
+# of the three datasets (tmpdf1,tmpdf2 and dfex) 
+# making sure they are assigned into the same object tempdf. 
+# As long as the ggplot code is applied to a dataset with the same structure
+# and variable labels the output will be updated automatically.
+```

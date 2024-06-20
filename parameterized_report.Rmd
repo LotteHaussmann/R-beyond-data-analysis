@@ -1,0 +1,117 @@
+---
+title: "Parameterized Report"
+author: "Charlotte Haussmann"
+date: "`r Sys.Date()`"
+output:
+  html_document: default
+  pdf_document: default
+params:
+  agegroup:
+    label: Agegroup
+    value: "19-28"
+    input: select
+    choices:
+    - "19-28"
+    - "29-38"
+    - "39-48"
+    - "49-58"
+    multiple: false
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r, echo=F, warning=FALSE, message=FALSE}
+# packages 
+r <- getOption("repos")
+r["CRAN"] <-"https://cloud.r-project.org/"
+options(repos=r)
+
+if (!require(pacman)) {
+    install.packages("pacman")
+    require(pacman)
+}
+
+pacman::p_load(tidyverse, ggplot2, haven, sjlabelled, dplyr, tidyr)
+```
+
+```{r, echo = F}
+# read in data
+df <- read_sav("data/sample.sav")
+```
+
+```{r, echo=F}
+#preparation agegroup 
+#["19-28", "29-38", "39-48", "49-58"] 
+
+df$Agegroup <- df$age
+df$Agegroup[df$age <= 28] <- "19-28"
+df$Agegroup[df$age  >= 29 & df$age <= 38] <- "29-38"
+df$Agegroup[df$age >= 39 & df$age <= 48] <- "39-48"
+df$Agegroup[df$age >= 49] <- "49-58"
+
+
+```
+
+## Parameterized Report
+
+```{r, echo = F}
+ageg <- params$agegroup
+ageg
+```
+
+```{r, echo = T}
+tempdf <- sjlabelled::remove_all_labels(df) %>%
+  filter(Agegroup %in% ageg)
+
+agg_data <- tempdf %>%
+  dplyr::count(age, gen)
+
+ggplot(agg_data, aes(x = as.factor(ageg), y=n,  fill = factor(gen, levels = c(1,2), labels = c("female", "male")))) +
+  geom_bar(stat = "identity", position = "dodge") +
+  labs(x = "Agegroup", y = "Frequency", fill = "Gender", title = "Bar chart of age and gender") +
+  theme_minimal()
+
+```
+
+First we look at some descriptive statistics. The age group `r ageg` has a sample size of `r nrow(tempdf)`.   
+
+
+```{r, echo = T}
+df %>% 
+  sjlabelled::remove_all_labels() %>% 
+  pivot_longer(contains("men_warm")) %>% 
+  group_by(gen) %>% 
+  summarise(mean=mean(value, na.rm = TRUE), 
+            sd=sd(value, na.rm = TRUE),
+            min=min(value, na.rm = TRUE),
+            max=max(value, na.rm = TRUE))
+```
+
+```{r, echo = F}
+df2 <- df %>% 
+  sjlabelled::remove_all_labels() %>% 
+  pivot_longer(contains("men_warm")) %>% 
+  group_by(gen) %>% 
+  summarise(mean=mean(value, na.rm = TRUE), 
+            sd=sd(value, na.rm = TRUE),
+            min=min(value, na.rm = TRUE),
+            max=max(value, na.rm = TRUE))
+
+df_clean <- df %>%
+  sjlabelled::remove_all_labels() %>%
+  pivot_longer(contains("men_warm"))
+
+group1 <- df_clean %>% filter(gen == 1) %>% pull(value)
+group2 <- df_clean %>% filter(gen == 2) %>% pull(value)
+
+# Performing t-test
+t_test_result <- t.test(group1, group2, na.rm = T)
+
+p_value <- t_test_result$p.value
+x <- "not significant"
+y <- "significant"
+
+```
+In the table you can see that **men** evaluate the stereotypical evaluation of men in terms of **warmth** with a mean of `r df2[2,2]` and a standard deviation of `r df2[2,3]`. **Women** on the other hand evaluate the **warmth** of men with a mean of `r df2[1,2]` and a standard deviation of `r df2[1,3]`. The t-test shows that the differences in the means are `r ifelse(p_value< .05, y ,x)`.
